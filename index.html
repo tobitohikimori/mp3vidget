@@ -13,7 +13,7 @@
 
         body {
             /* Фон для контраста на странице, сам виджет будет внутри своего блока */
-            background-color: #1a1a1a;
+            background-color: #262626;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -24,15 +24,12 @@
         /* Основной контейнер виджета - растягивается, но сохраняет квадратную форму */
         .widget-container {
             width: 100%;
-            max-width: 400px; /* Максимальная ширина, чтобы не было слишком большим */
             aspect-ratio: 1 / 1; /* Сохраняем квадрат */
             background-color: #262626;
-            border-radius: 16px; /* Легкое скругление */
-            padding: 24px; /* Внутренний отступ, чтобы контент не прилипал к краям */
             display: flex;
             flex-direction: column;
             color: #D4D4D4;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+
             transition: all 0.2s ease;
         }
 
