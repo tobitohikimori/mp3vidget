@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Last.fm Widget</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+        }
+
+        .lastfm-widget {
+            background: #2d2d2d;
+            border-radius: 16px;
+            padding: 20px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .status-badge.now-playing {
+            background: #1db954;
+            color: #000000;
+        }
+
+        .status-badge.last-listened {
+            background: #4a4a4a;
+            color: #ffffff;
+        }
+
+        .track-card {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .cover {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            background: #000000;
+            flex-shrink: 0;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .track-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            gap: 6px;
+        }
+
+        .track-name {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-artist {
+            font-size: 16px;
+            color: #b3b3b3;
+            font-weight: 400;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            text-align: center;
+            padding: 20px;
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: 12px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #808080;
+        }
+
+        .cover-placeholder {
+            background: #000000;
+        }
+
+        .fallback-note {
+            font-size: 12px;
+            color: #808080;
+            margin-top: 12px;
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="lastfm-widget" id="widget">
+        <div class="loading">Загрузка...</div>
+    </div>
+
+    <script>
+        const config = {
+            username: 'tobitohikimori',
+            apiKey: '90fe6e5b8710ef0a8818bb5bf6609918',
+            updateInterval: 5000
+        };
+
+        let lastValidTrack = null;
+        let widget = document.getElementById('widget');
+
+        async function fetchLastFmData() {
+            try {
+                const nowPlayingUrl = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${config.username}&api_key=${config.apiKey}&format=json&limit=1`;
+                const response = await fetch(nowPlayingUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.message);
+                }
+
+                const tracks = data.recenttracks.track;
+                
+                if (!tracks || tracks.length === 0) {
+                    throw new Error('Нет данных о прослушиваниях');
+                }
+
+                const currentTrack = tracks[0];
+                const isNowPlaying = currentTrack['@attr']?.nowplaying === 'true';
+                
+                // Обрабатываем текущий/последний трек
+                const processedTrack = processTrackData(currentTrack);
+                
+                // Если это текущий трек, сохраняем его как валидный
+                if (isNowPlaying) {
+                    lastValidTrack = processedTrack;
+                }
+
+                return {
+                    track: processedTrack,
+                    isNowPlaying: isNowPlaying
+                };
+
+            } catch (error) {
+                console.error('Ошибка при получении данных:', error);
+                return {
+                    error: error.message,
+                    fallbackTrack: lastValidTrack
+                };
+            }
+        }
+
+        function processTrackData(track) {
+            if (!track) return null;
+
+            return {
+                name: track.name?.trim() || 'без названия',
+                artist: track.artist?.['#text']?.trim() || 'неизвестен',
+                image: track.image?.find(img => img.size === 'extralarge')?.['#text'] || 
+                       track.image?.find(img => img.size === 'large')?.['#text'] || 
+                       track.image?.find(img => img.size === 'medium')?.['#text'] ||
+                       null,
+                url: track.url || '#'
+            };
+        }
+
+        function updateWidget() {
+            fetchLastFmData().then(data => {
+                if (data.error && data.fallbackTrack) {
+                    // Ошибка, но есть последний валидный трек
+                    renderTrack(data.fallbackTrack, false, true);
+                } else if (data.error) {
+                    // Ошибка и нет последнего трека
+                    renderError(data.error);
+                } else {
+                    // Все хорошо, показываем трек
+                    renderTrack(data.track, data.isNowPlaying);
+                }
+            }).catch(error => {
+                if (lastValidTrack) {
+                    renderTrack(lastValidTrack, false, true);
+                } else {
+                    renderError('Не удалось загрузить данные');
+                }
+            });
+        }
+
+        function renderTrack(track, isNowPlaying, isFallback = false) {
+            if (!track) {
+                renderError('Нет данных о треке');
+                return;
+            }
+
+            const statusClass = isNowPlaying ? 'now-playing' : 'last-listened';
+            const statusText = isNowPlaying ? 'СЛУШАЮ СЕЙЧАС' : 'ПОСЛЕДНЕЕ ПРОСЛУШАННОЕ';
+            
+            const fallbackNote = isFallback ? 
+                '<div class="fallback-note">⚠️ Показываю последние сохраненные данные</div>' : '';
+
+            widget.innerHTML = `
+                <div class="status-badge ${statusClass}">${statusText}</div>
+                <div class="track-card">
+                    ${renderCover(track.image)}
+                    <div class="track-info">
+                        <div class="track-name" title="${escapeHtml(track.name)}">${escapeHtml(track.name)}</div>
+                        <div class="track-artist" title="${escapeHtml(track.artist)}">${escapeHtml(track.artist)}</div>
+                    </div>
+                </div>
+                ${fallbackNote}
+            `;
+        }
+
+        function renderCover(imageUrl) {
+            if (imageUrl && imageUrl !== '') {
+                return `<img src="${escapeHtml(imageUrl)}" alt="Обложка" class="cover" onerror="this.onerror=null; this.src=''; this.classList.add('cover-placeholder')">`;
+            }
+            return `<div class="cover cover-placeholder"></div>`;
+        }
+
+        function renderError(message) {
+            widget.innerHTML = `
+                <div class="status-badge last-listened">ОШИБКА</div>
+                <div class="error-message">
+                    ⚠️ ${escapeHtml(message)}
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Запускаем обновление
+        updateWidget();
+        setInterval(updateWidget, config.updateInterval);
+    </script>
+</body>
+</html>
