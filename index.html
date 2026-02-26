@@ -19,12 +19,15 @@
             justify-content: center;
             align-items: flex-start;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+/* Добавить это */
+    margin: 0;
+    padding: 0;
         }
 
         /* Основной контейнер виджета - растягивается, но сохраняет квадратную форму */
         .widget-container {
             width: 100%;
-            aspect-ratio: 1 / 1; /* Сохраняем квадрат */
+
             background-color: #262626;
 	    padding: 24px 0;
             display: flex;
@@ -32,6 +35,10 @@
             color: #D4D4D4;
 
             transition: all 0.2s ease;
+/* Добавить ЭТИ три строки */
+    overflow: hidden; /* Обрезает всё, что выходит за пределы */
+    box-sizing: border-box; /* Учитывает padding в общей высоте */
+    height: 100%; /* Явно указываем высоту */
         }
 
         /* Блок с обложкой */
