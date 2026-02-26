@@ -95,6 +95,21 @@
             text-overflow: ellipsis;
         }
 
+        .listened-time {
+            font-size: 12px;
+            color: #808080;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .listened-time::before {
+            content: "🕒";
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
         .error-message {
             color: #ff6b6b;
             text-align: center;
@@ -137,6 +152,7 @@
         };
 
         let lastValidTrack = null;
+        let lastValidTime = null;
         let widget = document.getElementById('widget');
 
         async function fetchLastFmData() {
@@ -166,21 +182,34 @@
                 // Обрабатываем текущий/последний трек
                 const processedTrack = processTrackData(currentTrack);
                 
+                // Получаем время последнего прослушивания (если есть)
+                let listenedTime = null;
+                if (!isNowPlaying && currentTrack.date) {
+                    listenedTime = formatDate(currentTrack.date.uts);
+                }
+                
                 // Если это текущий трек, сохраняем его как валидный
                 if (isNowPlaying) {
                     lastValidTrack = processedTrack;
+                    lastValidTime = null;
+                } else if (currentTrack.date) {
+                    // Если это последний прослушанный, сохраняем и его, и время
+                    lastValidTrack = processedTrack;
+                    lastValidTime = formatDate(currentTrack.date.uts);
                 }
 
                 return {
                     track: processedTrack,
-                    isNowPlaying: isNowPlaying
+                    isNowPlaying: isNowPlaying,
+                    listenedTime: listenedTime
                 };
 
             } catch (error) {
                 console.error('Ошибка при получении данных:', error);
                 return {
                     error: error.message,
-                    fallbackTrack: lastValidTrack
+                    fallbackTrack: lastValidTrack,
+                    fallbackTime: lastValidTime
                 };
             }
         }
@@ -199,35 +228,54 @@
             };
         }
 
+        function formatDate(uts) {
+            if (!uts) return null;
+            
+            const date = new Date(parseInt(uts) * 1000);
+            
+            // Форматируем время: ЧЧ:ММ ДД.ММ.ГГГГ
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            
+            return `${hours}:${minutes} ${day}.${month}.${year}`;
+        }
+
         function updateWidget() {
             fetchLastFmData().then(data => {
                 if (data.error && data.fallbackTrack) {
                     // Ошибка, но есть последний валидный трек
-                    renderTrack(data.fallbackTrack, false, true);
+                    renderTrack(data.fallbackTrack, false, data.fallbackTime, true);
                 } else if (data.error) {
                     // Ошибка и нет последнего трека
                     renderError(data.error);
                 } else {
                     // Все хорошо, показываем трек
-                    renderTrack(data.track, data.isNowPlaying);
+                    renderTrack(data.track, data.isNowPlaying, data.listenedTime);
                 }
             }).catch(error => {
                 if (lastValidTrack) {
-                    renderTrack(lastValidTrack, false, true);
+                    renderTrack(lastValidTrack, false, lastValidTime, true);
                 } else {
                     renderError('Не удалось загрузить данные');
                 }
             });
         }
 
-        function renderTrack(track, isNowPlaying, isFallback = false) {
+        function renderTrack(track, isNowPlaying, listenedTime, isFallback = false) {
             if (!track) {
                 renderError('Нет данных о треке');
                 return;
             }
 
             const statusClass = isNowPlaying ? 'now-playing' : 'last-listened';
-            const statusText = isNowPlaying ? 'СЛУШАЮ СЕЙЧАС' : 'ПОСЛЕДНЕЕ ПРОСЛУШАННОЕ';
+            const statusText = isNowPlaying ? 'Online' : 'Ofline';
+            
+            // Добавляем время, если это не текущий трек
+            const timeHtml = (!isNowPlaying && listenedTime) ? 
+                `<div class="listened-time">${listenedTime}</div>` : '';
             
             const fallbackNote = isFallback ? 
                 '<div class="fallback-note">⚠️ Показываю последние сохраненные данные</div>' : '';
@@ -239,6 +287,7 @@
                     <div class="track-info">
                         <div class="track-name" title="${escapeHtml(track.name)}">${escapeHtml(track.name)}</div>
                         <div class="track-artist" title="${escapeHtml(track.artist)}">${escapeHtml(track.artist)}</div>
+                        ${timeHtml}
                     </div>
                 </div>
                 ${fallbackNote}
