@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Last.fm Widget</title>
+    <title>Last.fm Виджет (tobitohikimori)</title>
     <style>
         * {
             margin: 0;
@@ -12,376 +12,371 @@
         }
 
         body {
-            background: #1a1a1a;
+            /* Фон для контраста на странице, сам виджет будет внутри своего блока */
+            background-color: #1a1a1a;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        .lastfm-widget {
-            background: #262626;
-            border-radius: 16px;
-            padding: 32px 24px;
+        /* Основной контейнер виджета - растягивается, но сохраняет квадратную форму */
+        .widget-container {
             width: 100%;
-            max-width: 400px;
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            max-width: 400px; /* Максимальная ширина, чтобы не было слишком большим */
+            aspect-ratio: 1 / 1; /* Сохраняем квадрат */
+            background-color: #262626;
+            border-radius: 16px; /* Легкое скругление */
+            padding: 24px; /* Внутренний отступ, чтобы контент не прилипал к краям */
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 24px;
+            color: #D4D4D4;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transition: all 0.2s ease;
         }
 
-        .cover {
+        /* Блок с обложкой */
+        .cover-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px; /* Отступ от картинки до блока с названиями (меньше, чем следующий) */
+        }
+
+        .cover-image {
             width: 160px;
             height: 160px;
-            border-radius: 8px;
-            background: #000000;
-            object-fit: cover;
-            display: block;
-        }
-
-        .cover-placeholder {
-            background: #000000;
+            border-radius: 8px; /* Немного скруглим обложку */
+            background-color: #3a3a3a; /* Цвет фона, пока грузится */
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
+            object-fit: cover; /* Чтобы картинка заполняла пространство */
         }
 
-        .vinyl-icon {
-            width: 100px;
-            height: 100px;
-            fill: none;
-            stroke: #3a3a3a;
-            stroke-width: 2;
+        /* Векторный виниловый диск (запасной вариант) */
+        .vinyl-record {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #555, #111);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
         }
 
-        .vinyl-icon circle {
-            fill: none;
-            stroke: #4a4a4a;
+        .vinyl-record::before {
+            content: "";
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, #ccc, #666);
+            border-radius: 50%;
+            position: absolute;
+            top: 45px;
+            left: 45px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.7);
         }
 
-        .vinyl-icon .inner-circle {
-            fill: #333333;
-            stroke: #555555;
+        .vinyl-record::after {
+            content: "";
+            width: 25px;
+            height: 25px;
+            background-color: #ffd966;
+            border-radius: 50%;
+            position: absolute;
+            top: 67.5px;
+            left: 67.5px;
+            box-shadow: 0 0 8px gold;
         }
 
-        .track-info {
-            width: 100%;
+        /* Блок с текстовой информацией */
+        .info-section {
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 0;
-            text-align: center;
+            flex: 1; /* Занимает оставшееся место, прижимая статус вниз */
         }
 
         .track-name {
             font-size: 20px;
-            color: #D4D4D4;
-            line-height: 150%;
             font-weight: 600;
-            width: 100%;
+            color: #D4D4D4;
+            line-height: 150%; /* 30px */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            width: 100%;
+            text-align: center;
         }
 
-        .track-artist {
+        .artist-name {
             font-size: 16px;
             color: #7C7C7C;
-            line-height: 160%;
-            font-weight: 400;
-            width: 100%;
+            line-height: 160%; /* 25.6px */
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-bottom: 12px;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 8px; /* Небольшой отступ перед статусом */
         }
 
-        .status-container {
+        .status-section {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 6px;
-            width: 100%;
-        }
-
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-        }
-
-        .status-indicator.online {
-            background-color: #1DB954;
-            clip-path: polygon(0% 0%, 0% 100%, 100% 50%);
-            border-radius: 2px;
-            /* Треугольник */
-        }
-
-        .status-indicator.offline {
-            background-color: #6B6B6B;
-            border-radius: 2px;
-            /* Квадратик */
-        }
-
-        .status-text {
+            gap: 8px; /* Расстояние между иконкой и текстом статуса */
             font-size: 16px;
             color: #7C7C7C;
             line-height: 160%;
-            font-weight: 400;
+            margin-top: auto; /* Прижимаем к низу */
+            padding-top: 16px; /* Отступ от названия до статуса (больше, чем от картинки до названия) */
+        }
+
+        .status-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+        }
+
+        /* Треугольник (Play) для онлайн */
+        .icon-online {
+            width: 0;
+            height: 0;
+            border-left: 10px solid #1DB954;
+            border-top: 6px solid transparent;
+            border-bottom: 6px solid transparent;
+        }
+
+        /* Квадратик для оффлайн */
+        .icon-offline {
+            width: 10px;
+            height: 10px;
+            background-color: #6B6B6B;
+        }
+
+        .status-text {
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
-        .loading {
-            color: #7C7C7C;
-            font-size: 16px;
-            text-align: center;
-            padding: 40px;
-        }
-
-        .error-message {
+        /* Для ошибок или загрузки */
+        .error-text {
             color: #ff6b6b;
-            font-size: 16px;
             text-align: center;
-            padding: 30px;
+            margin-top: 10px;
         }
 
-        .fallback-note {
-            font-size: 14px;
-            color: #7C7C7C;
-            margin-top: 8px;
-            text-align: center;
-            font-style: italic;
-            opacity: 0.7;
-        }
     </style>
 </head>
 <body>
-    <div class="lastfm-widget" id="widget">
-        <div class="loading">Загрузка...</div>
+    <div id="app" class="widget-container">
+        <!-- Блок с обложкой -->
+        <div class="cover-section">
+            <img 
+                v-if="coverUrl" 
+                :src="coverUrl" 
+                alt="Обложка альбома" 
+                class="cover-image"
+                @error="handleImageError"
+            >
+            <div v-else class="cover-image vinyl-record"></div>
+        </div>
+
+        <!-- Блок с информацией о треке -->
+        <div class="info-section">
+            <div class="track-name" :title="trackName">{{ trackName }}</div>
+            <div class="artist-name" :title="artistName">{{ artistName }}</div>
+            
+            <!-- Статус с иконкой -->
+            <div class="status-section">
+                <span class="status-icon">
+                    <span v-if="isOnline" class="icon-online"></span>
+                    <span v-else class="icon-offline"></span>
+                </span>
+                <span class="status-text">{{ statusText }}</span>
+            </div>
+        </div>
     </div>
 
+    <!-- Подключаем Vue.js и Axios для удобства -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
     <script>
-        const config = {
-            username: 'tobitohikimori',
-            apiKey: '90fe6e5b8710ef0a8818bb5bf6609918',
-            updateInterval: 5000
-        };
+        const { createApp, ref, onMounted } = Vue;
 
-        let lastValidTrack = null;
-        let lastValidTimestamp = null;
-        let widget = document.getElementById('widget');
-
-        async function fetchLastFmData() {
-            try {
-                const nowPlayingUrl = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${config.username}&api_key=${config.apiKey}&format=json&limit=1`;
-                const response = await fetch(nowPlayingUrl);
+        const app = createApp({
+            setup() {
+                // Данные виджета
+                const coverUrl = ref('');
+                const trackName = ref('Загрузка...');
+                const artistName = ref('Загрузка...');
+                const statusText = ref('Ожидание');
+                const isOnline = ref(false);
                 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.error) {
-                    throw new Error(data.message);
-                }
-
-                const tracks = data.recenttracks.track;
-                
-                if (!tracks || tracks.length === 0) {
-                    throw new Error('Нет данных о прослушиваниях');
-                }
-
-                const currentTrack = tracks[0];
-                const isNowPlaying = currentTrack['@attr']?.nowplaying === 'true';
-                
-                const processedTrack = processTrackData(currentTrack);
-                
-                let timestamp = null;
-                if (!isNowPlaying && currentTrack.date) {
-                    timestamp = parseInt(currentTrack.date.uts) * 1000;
-                }
-                
-                if (isNowPlaying) {
-                    lastValidTrack = processedTrack;
-                    lastValidTimestamp = null;
-                } else if (currentTrack.date) {
-                    lastValidTrack = processedTrack;
-                    lastValidTimestamp = timestamp;
-                }
-
-                return {
-                    track: processedTrack,
-                    isNowPlaying: isNowPlaying,
-                    timestamp: timestamp
+                // Для хранения последнего успешного трека
+                let lastValidTrack = {
+                    cover: '',
+                    track: '—',
+                    artist: '—'
                 };
 
-            } catch (error) {
-                console.error('Ошибка при получении данных:', error);
+                // API данные
+                const username = 'tobitohikimori';
+                const apiKey = '90fe6e5b8710ef0a8818bb5bf6609918';
+                const baseUrl = 'https://ws.audioscrobbler.com/2.0/';
+
+                // Функция для форматирования времени
+                function formatTimeAgo(timestamp) {
+                    const now = Math.floor(Date.now() / 1000);
+                    const diff = now - timestamp;
+
+                    if (diff < 0) return 'только что'; // На случай рассинхронизации времени
+
+                    const minutes = Math.floor(diff / 60);
+                    const hours = Math.floor(diff / 3600);
+                    const days = Math.floor(diff / 86400);
+                    const months = Math.floor(diff / (86400 * 30));
+                    const years = Math.floor(diff / (86400 * 365));
+
+                    if (minutes < 1) return 'только что';
+                    if (minutes < 60) return `${minutes} мин назад`;
+                    if (hours < 24) return `${hours} ч назад`;
+                    if (days < 30) return `${days} дн назад`;
+                    if (months < 12) return `${months} мес назад`;
+                    return `${years} г назад`;
+                }
+
+                // Функция для обработки ошибки загрузки изображения
+                const handleImageError = (e) => {
+                    console.log('Ошибка загрузки изображения, показываем винил');
+                    coverUrl.value = ''; // Убираем URL, показываем винил
+                };
+
+                // Основная функция получения данных
+                async function fetchNowPlaying() {
+                    try {
+                        const response = await axios.get(baseUrl, {
+                            params: {
+                                method: 'user.getrecenttracks',
+                                user: username,
+                                api_key: apiKey,
+                                format: 'json',
+                                limit: 1,
+                                extended: 1 // Чтобы получить больше данных, включая изображения
+                            }
+                        });
+
+                        const tracks = response.data?.recenttracks?.track;
+                        if (!tracks || tracks.length === 0) {
+                            // Нет треков вообще
+                            trackName.value = 'Нет истории';
+                            artistName.value = '—';
+                            statusText.value = 'нет данных';
+                            isOnline.value = false;
+                            coverUrl.value = ''; // Покажем винил
+                            return;
+                        }
+
+                        const currentTrack = tracks[0];
+                        
+                        // Проверяем, играет ли сейчас
+                        const nowPlayingAttr = currentTrack['@attr']?.nowplaying;
+                        isOnline.value = nowPlayingAttr === 'true';
+
+                        // Получаем название трека
+                        const newTrackName = currentTrack.name?.trim() || 'Без названия';
+                        
+                        // Получаем имя исполнителя
+                        const newArtistName = currentTrack.artist?.name?.trim() || 'Неизвестно';
+                        
+                        // Получаем обложку (берем большое изображение, если есть)
+                        let newCoverUrl = '';
+                        if (currentTrack.image && currentTrack.image.length > 0) {
+                            // Ищем изображение размером large или extralarge
+                            const largeImage = currentTrack.image.find(img => img.size === 'extralarge') || 
+                                             currentTrack.image.find(img => img.size === 'large') ||
+                                             currentTrack.image[currentTrack.image.length - 1]; // Самое большое из доступных
+                            
+                            if (largeImage && largeImage['#text']) {
+                                newCoverUrl = largeImage['#text'];
+                            }
+                        }
+
+                        // Обновляем последний валидный трек, если получили данные
+                        // (даже если сейчас не играет, это все равно последнее прослушанное)
+                        if (newTrackName && newArtistName) {
+                            lastValidTrack = {
+                                cover: newCoverUrl,
+                                track: newTrackName,
+                                artist: newArtistName
+                            };
+                        }
+
+                        // Применяем новые данные
+                        trackName.value = newTrackName;
+                        artistName.value = newArtistName;
+                        
+                        // Если есть обложка и она не пустая, используем её, иначе винил
+                        if (newCoverUrl && newCoverUrl.trim() !== '') {
+                            coverUrl.value = newCoverUrl;
+                        } else {
+                            coverUrl.value = ''; // Покажем винил
+                        }
+
+                        // Формируем статус
+                        if (isOnline.value) {
+                            statusText.value = 'Онлайн';
+                        } else {
+                            // Если не онлайн, берем время из даты
+                            const dateAttr = currentTrack.date;
+                            if (dateAttr && dateAttr.uts) {
+                                statusText.value = formatTimeAgo(parseInt(dateAttr.uts));
+                            } else {
+                                statusText.value = 'Недавно';
+                            }
+                        }
+
+                    } catch (error) {
+                        console.error('Ошибка при запросе к Last.fm:', error);
+                        
+                        // В случае ошибки показываем последний успешно загруженный трек
+                        if (lastValidTrack.track !== '—') {
+                            trackName.value = lastValidTrack.track;
+                            artistName.value = lastValidTrack.artist;
+                            coverUrl.value = lastValidTrack.cover; // Если пусто, покажет винил
+                        } else {
+                            trackName.value = 'Ошибка загрузки';
+                            artistName.value = 'Проверьте соединение';
+                            coverUrl.value = '';
+                        }
+                        
+                        statusText.value = 'ошибка';
+                        isOnline.value = false;
+                    }
+                }
+
+                // Запускаем сразу и устанавливаем интервал
+                onMounted(() => {
+                    fetchNowPlaying();
+                    setInterval(fetchNowPlaying, 5000); // Каждые 5 секунд
+                });
+
                 return {
-                    error: error.message,
-                    fallbackTrack: lastValidTrack,
-                    fallbackTimestamp: lastValidTimestamp
+                    coverUrl,
+                    trackName,
+                    artistName,
+                    statusText,
+                    isOnline,
+                    handleImageError
                 };
             }
-        }
+        });
 
-        function processTrackData(track) {
-            if (!track) return null;
-
-            return {
-                name: track.name?.trim() || 'Без названия',
-                artist: track.artist?.['#text']?.trim() || 'Неизвестно',
-                image: track.image?.find(img => img.size === 'extralarge')?.['#text'] || 
-                       track.image?.find(img => img.size === 'large')?.['#text'] || 
-                       track.image?.find(img => img.size === 'medium')?.['#text'] ||
-                       null,
-                url: track.url || '#'
-            };
-        }
-
-        function getTimeAgo(timestamp) {
-            if (!timestamp) return null;
-            
-            const now = Date.now();
-            const diffMs = now - timestamp;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMs / 3600000);
-            const diffDays = Math.floor(diffMs / 86400000);
-            const diffMonths = Math.floor(diffDays / 30);
-            const diffYears = Math.floor(diffDays / 365);
-
-            if (diffMins < 1) return 'только что';
-            if (diffMins < 60) {
-                if (diffMins % 10 === 1 && diffMins % 100 !== 11) return `${diffMins} минуту назад`;
-                if ([2, 3, 4].includes(diffMins % 10) && ![12, 13, 14].includes(diffMins % 100)) return `${diffMins} минуты назад`;
-                return `${diffMins} минут назад`;
-            }
-            if (diffHours < 24) {
-                const hours = diffHours;
-                if (hours % 10 === 1 && hours % 100 !== 11) return `${hours} час назад`;
-                if ([2, 3, 4].includes(hours % 10) && ![12, 13, 14].includes(hours % 100)) return `${hours} часа назад`;
-                return `${hours} часов назад`;
-            }
-            if (diffDays < 30) {
-                const days = diffDays;
-                if (days % 10 === 1 && days % 100 !== 11) return `${days} день назад`;
-                if ([2, 3, 4].includes(days % 10) && ![12, 13, 14].includes(days % 100)) return `${days} дня назад`;
-                return `${days} дней назад`;
-            }
-            if (diffMonths < 12) {
-                const months = diffMonths;
-                if (months % 10 === 1 && months % 100 !== 11) return `${months} месяц назад`;
-                if ([2, 3, 4].includes(months % 10) && ![12, 13, 14].includes(months % 100)) return `${months} месяца назад`;
-                return `${months} месяцев назад`;
-            }
-            
-            const years = diffYears;
-            if (years % 10 === 1 && years % 100 !== 11) return `${years} год назад`;
-            if ([2, 3, 4].includes(years % 10) && ![12, 13, 14].includes(years % 100)) return `${years} года назад`;
-            return `${years} лет назад`;
-        }
-
-        function renderVinylIcon() {
-            return `
-                <svg class="vinyl-icon" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45"/>
-                    <circle class="inner-circle" cx="50" cy="50" r="15"/>
-                    <circle cx="50" cy="50" r="3" fill="#7C7C7C"/>
-                    <line x1="50" y1="50" x2="85" y2="50" stroke="#555555" stroke-width="1.5"/>
-                </svg>
-            `;
-        }
-
-        function renderCover(imageUrl) {
-            if (imageUrl && imageUrl !== '') {
-                return `<img src="${escapeHtml(imageUrl)}" alt="Обложка" class="cover" onerror="this.onerror=null; this.src=''; this.classList.add('cover-placeholder'); this.innerHTML = '${renderVinylIcon()}`;
-            }
-            return `<div class="cover cover-placeholder">${renderVinylIcon()}</div>`;
-        }
-
-        function updateWidget() {
-            fetchLastFmData().then(data => {
-                if (data.error && data.fallbackTrack) {
-                    renderTrack(
-                        data.fallbackTrack, 
-                        false, 
-                        data.fallbackTimestamp, 
-                        true
-                    );
-                } else if (data.error) {
-                    renderError(data.error);
-                } else {
-                    renderTrack(
-                        data.track, 
-                        data.isNowPlaying, 
-                        data.timestamp
-                    );
-                }
-            }).catch(error => {
-                if (lastValidTrack) {
-                    renderTrack(lastValidTrack, false, lastValidTimestamp, true);
-                } else {
-                    renderError('Не удалось загрузить данные');
-                }
-            });
-        }
-
-        function renderTrack(track, isNowPlaying, timestamp, isFallback = false) {
-            if (!track) {
-                renderError('Нет данных о треке');
-                return;
-            }
-
-            const statusText = isNowPlaying ? 'Онлайн' : (timestamp ? getTimeAgo(timestamp) : 'Неизвестно');
-            const indicatorClass = isNowPlaying ? 'online' : 'offline';
-            
-            const fallbackNote = isFallback ? 
-                '<div class="fallback-note">⚠️ Показываю последние сохраненные данные</div>' : '';
-
-            widget.innerHTML = `
-                ${renderCover(track.image)}
-                <div class="track-info">
-                    <div class="track-name" title="${escapeHtml(track.name)}">${escapeHtml(track.name)}</div>
-                    <div class="track-artist" title="${escapeHtml(track.artist)}">${escapeHtml(track.artist)}</div>
-                    <div class="status-container">
-                        <span class="status-indicator ${indicatorClass}"></span>
-                        <span class="status-text">${escapeHtml(statusText)}</span>
-                    </div>
-                </div>
-                ${fallbackNote}
-            `;
-        }
-
-        function renderError(message) {
-            widget.innerHTML = `
-                <div class="cover cover-placeholder">${renderVinylIcon()}</div>
-                <div class="track-info">
-                    <div class="track-name">Ошибка</div>
-                    <div class="track-artist">Неизвестно</div>
-                    <div class="status-container">
-                        <span class="status-indicator offline"></span>
-                        <span class="status-text">${escapeHtml(message)}</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        function escapeHtml(text) {
-            if (!text) return '';
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Запускаем обновление
-        updateWidget();
-        setInterval(updateWidget, config.updateInterval);
+        app.mount('#app');
     </script>
 </body>
 </html>
